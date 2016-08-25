@@ -2,7 +2,7 @@ name = Content Importer
 description = "Content Importer and Feature for demo search content"
 core = 7.x
 ;content management dependencies
-dependencies[] = entity_api
+dependencies[] = entity
 dependencies[] = features
 
 ;search dependencies
