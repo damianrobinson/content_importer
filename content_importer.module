@@ -1,0 +1,66 @@
+<?php
+/**
+ * Run drush ev "content_importer_import();"
+ * to import sample content.
+ */
+
+/**
+ * Simple content importer
+ */
+function content_importer_import() {
+  $q = "https://query.yahooapis.com/v1/public/yql?q=select%20*%20from%20html%20where%20url%3D'http%3A%2F%2Fwww.bil-jac.com%2Fdog-breeds.php'%20and%20xpath%3D'%2F%2F*%5B%40id%3D%22breeds%22%5D%2F%2Fa'&format=json&env=store%3A%2F%2Fdatatables.org%2Falltableswithkeys";
+
+  // Create curl request
+  $curl = curl_init();
+  curl_setopt($curl, CURLOPT_URL, $q);
+  curl_setopt($curl, CURLOPT_FAILONERROR, true);
+  curl_setopt($curl, CURLOPT_FOLLOWLOCATION, true);
+  curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
+  curl_setopt($curl, CURLOPT_SSL_VERIFYHOST, false);
+  curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, false);
+  $out = curl_exec($curl);
+
+  // Get list of Dogs & URLs from http://www.bil-jac.com/dog-breeds.php
+  $dogs = json_decode($out);
+
+  foreach ($dogs->query->results->a as $key => $value) {
+
+    $dog_url = "https://query.yahooapis.com/v1/public/yql?q=select%20*%20from%20html%20where%20url%3D'http%3A%2F%2Fwww.bil-jac.com" .  urlencode('/'.$value->href) . "'%20and%20xpath%3D%22%2F%2F*%5Bcontains('%20excercise%20grooming%20aka%20origin%20role%20group%20history%20health%20temperament'%2C%20concat('%20'%2C%20%40id%2C%20'%20'))%5D%22&format=json&env=store%3A%2F%2Fdatatables.org%2Falltableswithkeys";
+    curl_setopt($curl, CURLOPT_URL, $dog_url);
+    $dog_details = curl_exec($curl);
+    $dog = json_decode($dog_details);
+    $node = entity_create('node', array('type' => 'dog'));
+
+    $fields = array(
+      'aka',
+      'group',
+      'origin',
+      'role',
+      'history',
+      'health',
+      'temperament'
+    );
+
+
+    $new_node = entity_metadata_wrapper('node', $node);
+    $new_node->title = $value->content;
+    $node->uid = 0;
+
+    // Check for a matching field.
+    foreach ($fields as $field) {
+      if (!empty($dog->query->results->p)) {
+        foreach ($dog->query->results->p as $key => $value) {
+          if ($value->id == $field) {
+            $field_name = "field_{$field}";
+            $new_node->$field_name = $dog->query->results->p[$key]->content;
+          }
+        }
+      }
+    }
+    if ($new_node->save()) {
+      drush_print("Importing " . $node->title);
+    };
+  }
+}
+
+

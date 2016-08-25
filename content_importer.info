@@ -1,0 +1,11 @@
+name = Content Importer
+description = "Content Importer and Feature for demo search content"
+core = 7.x
+;content management dependencies
+dependencies[] = entity_api
+
+;search dependencies
+dependencies[] = search_api
+dependencies[] = search_api_solr
+dependencies[] = search_api_page
+
